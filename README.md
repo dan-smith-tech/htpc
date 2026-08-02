@@ -32,7 +32,7 @@
 Install dependencies:
 
 ```bash
-sudo pacman -S qemu virt-install dnsmasq
+sudo pacman -S qemu virt-install virt-viewer dnsmasq
 ```
 
 Add user to the virtualisation daemon group so root isn't needed to run it:

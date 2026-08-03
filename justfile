@@ -5,6 +5,7 @@ net_name := "nat-net"
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
+# create a htpcos virtual machine with a network connection from scratch
 setup:
     #!/usr/bin/env bash
 
@@ -57,6 +58,7 @@ setup:
     # interface with the vm via a gui
     virt-viewer --connect qemu:///system --wait {{ vm_name }} &
 
+# completely remove the htpcos virtual machine and network
 destroy:
     #!/usr/bin/env bash
 
@@ -74,6 +76,7 @@ destroy:
 
     sudo rm -rf {{ workdir }}
 
+# run an existing htpcos virtual machine
 up:
     #!/usr/bin/env bash
 
@@ -86,12 +89,14 @@ up:
     # interface with the vm via a gui
     virt-viewer --connect qemu:///system --wait {{ vm_name }} &
 
+# gracefully shut down an existing htpcos virtual machine
 down:
     #!/usr/bin/env bash
 
     # gracefully terminate the vm
     sudo virsh shutdown {{ vm_name }}
 
+# display the configuration of htpcos virtual machine
 status:
     # display configuration status of the vm if it exists
     sudo virsh dominfo {{ vm_name }} 2>/dev/null || echo 'VM not defined'

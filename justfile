@@ -8,8 +8,10 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 setup:
     #!/usr/bin/env bash
 
-    systemctl is-active --quiet libvirtd || sudo systemctl start libvirtd
+    # start virtualisation deamon
+    sudo systemctl start libvirtd
 
+    # create and start a network for the vm to connect to
     if ! sudo virsh net-list --all --name | grep -qx '{{ net_name }}'; then
     	cat > /tmp/{{ net_name }}.xml <<-'XML'
     	<network>
@@ -29,22 +31,18 @@ setup:
     	XML
     	sudo virsh net-define /tmp/{{ net_name }}.xml
     	rm -f /tmp/{{ net_name }}.xml
-    fi
-
-    if ! sudo virsh net-list --name | grep -qx '{{ net_name }}'; then
     	sudo virsh net-start {{ net_name }}
     fi
 
     sudo mkdir -p {{ workdir }}
 
-    if [ ! -f {{ workdir }}/archlinux-x86_64.iso ]; then
-    	sudo curl -fL {{ iso_url }} -o {{ workdir }}/archlinux-x86_64.iso
-    fi
+    # download the arch linux iso if there is no local copy
+    sudo curl -fL {{ iso_url }} -o {{ workdir }}/archlinux-x86_64.iso
 
-    if [ ! -f {{ workdir }}/arch.qcow2 ]; then
-    	sudo qemu-img create -f qcow2 {{ workdir }}/arch.qcow2 20G
-    fi
+    # create a vm image from the arch linux iso
+    sudo qemu-img create -f qcow2 {{ workdir }}/arch.qcow2 20G
 
+    # create and start a vm from the arch linux image
     if ! sudo virsh list --all --name | grep -qx '{{ vm_name }}'; then
     	sudo virt-install \
     		--name {{ vm_name }} \
@@ -62,42 +60,44 @@ setup:
     		--noautoconsole
     fi
 
-    if ! sudo virsh domstate {{ vm_name }} | grep -qx 'running'; then
-    	sudo virsh start {{ vm_name }}
-    fi
-
-    sleep 2
+    # interface with the vm with a gui
     virt-viewer --connect qemu:///system --wait {{ vm_name }} &
 
 destroy:
     #!/usr/bin/env bash
+
+    # kill the vm process
     sudo virsh destroy {{ vm_name }} 2>/dev/null || true
+
+    # delete the vm instance
     sudo virsh undefine {{ vm_name }} --keep-nvram 2>/dev/null || true
+
+    # kill the network process and interface
     sudo virsh net-destroy {{ net_name }} 2>/dev/null || true
+
+    # delete the network instance
     sudo virsh net-undefine {{ net_name }} 2>/dev/null || true
+
     sudo rm -rf {{ workdir }}
 
 up:
     #!/usr/bin/env bash
-    systemctl is-active --quiet libvirtd || sudo systemctl start libvirtd
-    if sudo virsh domstate {{ vm_name }} | grep -qE 'shut off|shutdown'; then
-    	sudo virsh start {{ vm_name }}
-    fi
-    sleep 2
+
+    # start virtualisation deamon
+    sudo systemctl start libvirtd
+
+    # start the existing vm
+    sudo virsh start {{ vm_name }}
+
+    # connect to the vm with a gui
     virt-viewer --connect qemu:///system --wait {{ vm_name }} &
 
 down:
     #!/usr/bin/env bash
-    sudo virsh shutdown {{ vm_name }}
-    sleep 15
-    if ! sudo virsh domstate {{ vm_name }} | grep -qE 'shut off|shutdown'; then
-    	sudo virsh destroy {{ vm_name }}
-    fi
 
-restart:
-    just down
-    sleep 15
-    just up
+    # gracefully terminate the vm
+    sudo virsh shutdown {{ vm_name }}
 
 status:
+    # display configuration status of the vm if it exists
     sudo virsh dominfo {{ vm_name }} 2>/dev/null || echo 'VM not defined'

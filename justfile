@@ -12,55 +12,49 @@ setup:
     sudo systemctl start libvirtd
 
     # create and start a network for the vm to connect to
-    if ! sudo virsh net-list --all --name | grep -qx '{{ net_name }}'; then
-    	cat > /tmp/{{ net_name }}.xml <<-'XML'
-    	<network>
-    	  <name>{{ net_name }}</name>
-    	  <forward mode='nat'>
-    	    <nat>
-    	      <port start='1024' end='65535'/>
-    	    </nat>
-    	  </forward>
-    	  <bridge name='virbr1' stp='on' delay='0'/>
-    	  <ip address='192.168.122.1' netmask='255.255.255.0'>
-    	    <dhcp>
-    	      <range start='192.168.122.100' end='192.168.122.200'/>
-    	    </dhcp>
-    	  </ip>
-    	</network>
-    	XML
-    	sudo virsh net-define /tmp/{{ net_name }}.xml
-    	rm -f /tmp/{{ net_name }}.xml
-    	sudo virsh net-start {{ net_name }}
-    fi
+    cat > /tmp/{{ net_name }}.xml <<-'XML'
+    <network>
+        <name>{{ net_name }}</name>
+        <forward mode='nat'>
+            <nat>
+                <port start='1024' end='65535'/>
+            </nat>
+        </forward>
+        <bridge name='virbr1' stp='on' delay='0'/>
+        <ip address='192.168.122.1' netmask='255.255.255.0'>
+            <dhcp>
+                <range start='192.168.122.100' end='192.168.122.200'/>
+            </dhcp>
+        </ip>
+    </network>
+    XML
+    sudo virsh net-define /tmp/{{ net_name }}.xml
+    rm -f /tmp/{{ net_name }}.xml
+    sudo virsh net-start {{ net_name }}
 
     sudo mkdir -p {{ workdir }}
 
-    # download the arch linux iso if there is no local copy
+    # download the arch linux iso and create a vm image
     sudo curl -fL {{ iso_url }} -o {{ workdir }}/archlinux-x86_64.iso
-
-    # create a vm image from the arch linux iso
     sudo qemu-img create -f qcow2 {{ workdir }}/arch.qcow2 20G
 
     # create and start a vm from the arch linux image
-    if ! sudo virsh list --all --name | grep -qx '{{ vm_name }}'; then
-    	sudo virt-install \
-    		--name {{ vm_name }} \
-    		--description 'Home Theatre PC Operating System' \
-    		--os-variant archlinux \
-    		--virt-type kvm \
-    		--ram 4096 \
-    		--vcpus 2 \
-    		--disk '{{ workdir }}/arch.qcow2,bus=scsi' \
-    		--controller type=scsi,model=virtio-scsi \
-    		--network network={{ net_name }},model=virtio \
-    		--cdrom {{ workdir }}/archlinux-x86_64.iso \
-    		--graphics vnc \
-    		--boot uefi \
-    		--noautoconsole
-    fi
+    sudo virt-install \
+        --name {{ vm_name }} \
+        --description 'Home Theatre PC Operating System' \
+        --os-variant archlinux \
+        --virt-type kvm \
+        --ram 4096 \
+        --vcpus 2 \
+        --disk '{{ workdir }}/arch.qcow2,bus=scsi' \
+        --controller type=scsi,model=virtio-scsi \
+        --network network={{ net_name }},model=virtio \
+        --cdrom {{ workdir }}/archlinux-x86_64.iso \
+        --graphics vnc \
+        --boot uefi \
+        --noautoconsole
 
-    # interface with the vm with a gui
+    # interface with the vm via a gui
     virt-viewer --connect qemu:///system --wait {{ vm_name }} &
 
 destroy:
@@ -89,7 +83,7 @@ up:
     # start the existing vm
     sudo virsh start {{ vm_name }}
 
-    # connect to the vm with a gui
+    # interface with the vm via a gui
     virt-viewer --connect qemu:///system --wait {{ vm_name }} &
 
 down:

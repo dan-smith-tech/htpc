@@ -1,7 +1,8 @@
 vm_name := "htpcos"
 workdir := "/var/lib/libvirt/images/htpcos"
-iso_url := "https://mirrors.kernel.org/archlinux/iso/latest/archlinux-x86_64.iso"
 net_name := "nat-net"
+isobuild := "/var/lib/libvirt/images/htpcos/isobuild"
+arch_install_script := "htpcos.sh"
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
@@ -35,8 +36,32 @@ setup:
 
     sudo mkdir -p {{ workdir }}
 
-    # download the arch linux iso and create a vm image
-    sudo curl -fL {{ iso_url }} -o {{ workdir }}/archlinux-x86_64.iso
+    # create and populate custom archiso profile from releng
+    sudo rm -rf {{ isobuild }}
+    sudo cp -r /usr/share/archiso/configs/releng {{ isobuild }}
+
+    # copy install script into the live filesystem at /root/htpcos.sh
+    sudo install -Dm755 {{ arch_install_script }} {{ isobuild }}/airootfs/root/htpcos.sh
+
+    # add script= boot parameter to UEFI bootloader config
+    sudo sed -i '/^options / s|$| script=/root/htpcos.sh|' \
+        {{ isobuild }}/efiboot/loader/entries/01-archiso-linux.conf
+
+    # add script= boot parameter to BIOS bootloader config
+    sudo sed -i '/^APPEND / s|$| script=/root/htpcos.sh|' \
+        {{ isobuild }}/syslinux/archiso_sys-linux.cfg
+
+    # set file permissions for the installer script in profiledef.sh
+    if ! grep -q '/root/htpcos.sh' {{ isobuild }}/profiledef.sh; then
+        sudo sed -i '/^file_permissions=(/a\\  ["/root/htpcos.sh"]="0:0:755"' {{ isobuild }}/profiledef.sh
+    fi
+
+    # build the custom ISO
+    sudo mkarchiso -v -w {{ workdir }}/build -o {{ workdir }} {{ isobuild }}
+
+    # resolve the generated ISO (avoid hardcoding versioned filenames) and move into place
+    sudo bash -c 'mv "$(find {{ workdir }} -maxdepth 1 -name "archlinux-*.iso" | head -n 1)" {{ workdir }}/archlinux-custom.iso'
+
     sudo qemu-img create -f qcow2 {{ workdir }}/arch.qcow2 20G
 
     # create and start a vm from the arch linux image
@@ -50,7 +75,7 @@ setup:
         --disk '{{ workdir }}/arch.qcow2,bus=scsi' \
         --controller type=scsi,model=virtio-scsi \
         --network network={{ net_name }},model=virtio \
-        --cdrom {{ workdir }}/archlinux-x86_64.iso \
+        --cdrom {{ workdir }}/archlinux-custom.iso \
         --graphics vnc \
         --boot uefi \
         --noautoconsole
@@ -74,6 +99,7 @@ destroy:
     # delete the network instance
     sudo virsh net-undefine {{ net_name }} 2>/dev/null || true
 
+    sudo rm -rf {{ isobuild }}
     sudo rm -rf {{ workdir }}
 
 # run an existing htpcos virtual machine

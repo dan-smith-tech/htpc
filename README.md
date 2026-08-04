@@ -35,40 +35,11 @@ Install dependencies:
 sudo pacman -S qemu virt-install virt-viewer dnsmasq
 ```
 
-Add user to the virtualisation daemon group so root isn't needed to run it:
+Setup and run the virtual machine from scratch:
 
 ```bash
-sudo usermod -aG libvirt "$USER"
+just setup
 ```
 
-## Installation
-
-Run the installation script to create and prepare the VM:
-
-```bash
-bash install.sh
-```
-
-This enables libvirt, sets up an isolated NAT network for the VM, downloads the Arch Linux ISO, creates a disk image, and registers the VM.
-
-## Booting the VM
-
-Start the VM (it will boot from the installation ISO):
-
-```bash
-sudo virsh start htpcos
-```
-
-Connect to the VNC display to complete the Arch Linux installation:
-
-```bash
-vncviewer "$(virsh vncdisplay htpcos)"
-```
-
-Once installed, shutdown and reconfigure the VM to boot from disk instead of the ISO:
-
-```bash
-sudo virsh destroy htpcos
-sudo virsh edit htpcos  # remove the <boot dev='cdrom'/> line or change order
-sudo virsh start htpcos
-```
+> [!NOTE]
+> Run `just -l` for instructions on interacting with the virtual machine.

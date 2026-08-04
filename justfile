@@ -1,12 +1,12 @@
-vm_name := "htpcos"
-workdir := "/var/lib/libvirt/images/htpcos"
+vm_name := "htpc"
+workdir := "/var/lib/libvirt/images/htpc"
 net_name := "nat-net"
-isobuild := "/var/lib/libvirt/images/htpcos/isobuild"
-arch_install_script := "htpcos.sh"
+isobuild := "/var/lib/libvirt/images/htpc/isobuild"
+arch_install_script := "htpcinstall.sh"
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-# create a htpcos virtual machine with a network connection from scratch
+# create a htpc virtual machine with a network connection from scratch
 setup:
     #!/usr/bin/env bash
 
@@ -40,20 +40,20 @@ setup:
     sudo rm -rf {{ isobuild }}
     sudo cp -r /usr/share/archiso/configs/releng {{ isobuild }}
 
-    # copy install script into the live filesystem at /root/htpcos.sh
-    sudo install -Dm755 {{ arch_install_script }} {{ isobuild }}/airootfs/root/htpcos.sh
+    # copy install script into the live filesystem at /root/htpcinstall.sh
+    sudo install -Dm755 {{ arch_install_script }} {{ isobuild }}/airootfs/root/htpcinstall.sh
 
     # add script= boot parameter to UEFI bootloader config
-    sudo sed -i '/^options / s|$| script=/root/htpcos.sh|' \
+    sudo sed -i '/^options / s|$| script=/root/htpcinstall.sh|' \
         {{ isobuild }}/efiboot/loader/entries/01-archiso-linux.conf
 
     # add script= boot parameter to BIOS bootloader config
-    sudo sed -i '/^APPEND / s|$| script=/root/htpcos.sh|' \
+    sudo sed -i '/^APPEND / s|$| script=/root/htpcinstall.sh|' \
         {{ isobuild }}/syslinux/archiso_sys-linux.cfg
 
     # set file permissions for the installer script in profiledef.sh
-    if ! grep -q '/root/htpcos.sh' {{ isobuild }}/profiledef.sh; then
-        sudo sed -i '/^file_permissions=(/a\\  ["/root/htpcos.sh"]="0:0:755"' {{ isobuild }}/profiledef.sh
+    if ! grep -q '/root/htpcinstall.sh' {{ isobuild }}/profiledef.sh; then
+        sudo sed -i '/^file_permissions=(/a\\  ["/root/htpcinstall.sh"]="0:0:755"' {{ isobuild }}/profiledef.sh
     fi
 
     # build the custom ISO
@@ -83,7 +83,7 @@ setup:
     # interface with the vm via a gui
     virt-viewer --connect qemu:///system --wait {{ vm_name }} &
 
-# completely remove the htpcos virtual machine and network
+# completely remove the htpc virtual machine and network
 destroy:
     #!/usr/bin/env bash
 
@@ -102,7 +102,7 @@ destroy:
     sudo rm -rf {{ isobuild }}
     sudo rm -rf {{ workdir }}
 
-# run an existing htpcos virtual machine
+# run the existing htpc virtual machine
 up:
     #!/usr/bin/env bash
 
@@ -115,14 +115,14 @@ up:
     # interface with the vm via a gui
     virt-viewer --connect qemu:///system --wait {{ vm_name }} &
 
-# gracefully shut down an existing htpcos virtual machine
+# gracefully shut down the existing htpc virtual machine
 down:
     #!/usr/bin/env bash
 
     # gracefully terminate the vm
     sudo virsh shutdown {{ vm_name }}
 
-# display the configuration of htpcos virtual machine
+# display the configuration of the htpc virtual machine
 status:
     # display configuration status of the vm if it exists
     sudo virsh dominfo {{ vm_name }} 2>/dev/null || echo 'VM not defined'

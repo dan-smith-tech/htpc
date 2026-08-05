@@ -78,6 +78,8 @@ setup:
         --cdrom {{ workdir }}/archlinux-custom.iso \
         --graphics vnc \
         --boot uefi \
+        --filesystem='htpc,hostshare,driver.type=virtiofs' \
+        --memorybacking=source.type=memfd,access.mode=shared \
         --noautoconsole
 
     # interface with the vm via a gui

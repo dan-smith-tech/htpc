@@ -82,6 +82,9 @@ mkdir -p /boot/grub/locale
 cp /usr/share/locale/en\\@quot/LC_MESSAGES/grub.mo /boot/grub/locale/en.mo 2>/dev/null || true
 grub-mkconfig -o /boot/grub/grub.cfg
 
+mkdir -p /hostshare
+echo 'hostshare /hostshare virtiofs defaults 0 0' >> /etc/fstab
+
 systemctl enable NetworkManager
 CHROOT_SCRIPT
 

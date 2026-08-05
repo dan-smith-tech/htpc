@@ -84,6 +84,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 mkdir -p /hostshare
 echo 'hostshare /hostshare virtiofs defaults 0 0' >> /etc/fstab
+echo '/hostshare /home/htpc none bind 0 0' >> /etc/fstab
 
 systemctl enable NetworkManager
 CHROOT_SCRIPT

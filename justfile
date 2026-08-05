@@ -3,6 +3,7 @@ workdir := "/var/lib/libvirt/images/htpc"
 net_name := "nat-net"
 isobuild := "/var/lib/libvirt/images/htpc/isobuild"
 arch_install_script := "htpcinstall.sh"
+hostshare := justfile_dir() + "/htpc"
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
@@ -78,7 +79,7 @@ setup:
         --cdrom {{ workdir }}/archlinux-custom.iso \
         --graphics vnc \
         --boot uefi \
-        --filesystem='htpc,hostshare,driver.type=virtiofs' \
+        --filesystem='{{ hostshare }},hostshare,driver.type=virtiofs' \
         --memorybacking=source.type=memfd,access.mode=shared \
         --noautoconsole
 
